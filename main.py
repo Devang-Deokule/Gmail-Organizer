@@ -17,6 +17,15 @@ keywords = [
     "hackathon", "unstop", "winner", "result", "participation", "selection", "registration",
     "MongoDB", "LinkedIn", "TCS", "Wipro", "Infosys", "Accenture", "Google", "Microsoft"
 ]
+label_keywords = {
+    "Jobs": ["job", "opportunity", "hiring", "career", "placement", "offer"],
+    "Internships": ["internship", "training", "intern"],
+    "Hackathons": ["hackathon", "unstop", "devpost", "solution", "submission", "winner"],
+    "Interviews": ["interview", "shortlisted", "selected", "round"],
+    "Results": ["result", "qualified", "merit", "score", "ranking"],
+    "Companies": ["MongoDB", "Google", "Microsoft", "Infosys", "TCS", "Wipro", "LinkedIn"]
+}
+
 
 def main():
     """Shows basic usage of the Gmail API.
@@ -43,7 +52,7 @@ def main():
     service = build('gmail', 'v1', credentials=creds)
 
     # Fetch recent 20 messages
-    results = service.users().messages().list(userId='me', maxResults=20).execute()
+    results = service.users().messages().list(userId='me', maxResults=100).execute()
     messages = results.get('messages', [])
 
     if not messages:
@@ -65,10 +74,20 @@ def main():
         subject = next((h['value'] for h in headers if h['name'] == 'Subject'), 'No subject')
 
         # Check for keyword matches
-        if any(kw.lower() in subject.lower() for kw in keywords):
-            print(f"From: {sender}")
-            print(f"Subject: {subject}")
-            print("-" * 40)
+        for label, kw_list in label_keywords.items():
+            if any(k.lower() in subject.lower() for k in kw_list):
+                print(f"[{label}] From: {sender}")
+                print(f"Subject: {subject}")
+                print("-" * 40)
+
+                label_id = get_or_create_label(service, label)
+                service.users().messages().modify(
+                    userId='me',
+                    id=msg['id'],
+                    body={'addLabelIds': [label_id]}
+                ).execute()
+                break  # Don't apply multiple labels to same mail
+
 
 if __name__ == '__main__':
     main()
